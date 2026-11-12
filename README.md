@@ -22,20 +22,39 @@
 - Вход в админку: общий пароль. После 10 неверных попыток с одного адреса вход блокируется на 15 минут. Cookie входа — `HttpOnly`, `SameSite=Strict`.
 - Страницы закрыты от поисковиков (`noindex`).
 
-## Запуск на сервере (Docker)
+## Запуск на сервере CRM (основной вариант)
+
+Сайт работает на том же сервере, что и CRM Orient Travel. Порты 80/443 там занимает Caddy из CRM, поэтому он же отдаёт сайт проверки по отдельному домену. Своего Caddy этот сайт не запускает.
+
+1. **DNS.** A-запись домена проверки (`hujjat-ipotekabank.uz`) должна указывать на IP сервера CRM.
+2. **CRM.** Домен уже прописан в `crm/Caddyfile` репозитория CRM (`VERIFY_DOMAIN`, по умолчанию `hujjat-ipotekabank.uz`). Он подключается при обычном обновлении CRM. Если домен другой, укажите `VERIFY_DOMAIN=<домен>` в `~/orient/crm/.env` и выполните `cd ~/orient/crm && docker compose --profile https up -d`.
+3. **Сайт проверки.**
+   ```bash
+   cd ~ && git clone https://github.com/vito-at/qr-code-creator.git && cd qr-code-creator
+   cp .env.example .env    # заполнить BASE_URL=https://<домен>, ADMIN_PASSWORD, SESSION_SECRET (openssl rand -hex 32), ADMIN_PATH
+   docker compose -f docker-compose.yml -f docker-compose.crm.yml up -d --build
+   ```
+   Если сеть CRM называется не `crm_default`, укажите её в `CRM_NETWORK`. Список сетей — `docker network ls`.
+4. Откройте `https://<домен>/<ADMIN_PATH>`. Сертификат Caddy получает сам, первое открытие может занять до минуты.
+
+Обновление:
+
+```bash
+cd ~/qr-code-creator && git pull && docker compose -f docker-compose.yml -f docker-compose.crm.yml up -d --build
+```
+
+- **`BASE_URL` зашивается в QR-коды.** После того как документы ушли клиентам, его не меняйте, иначе старые QR-коды перестанут открываться.
+- Данные (база и файлы) лежат в томе Docker `qr-code-creator_data`. Резервная копия: `docker compose cp app:/data ./backup-$(date +%F)`.
+- Если репозиторий сделать приватным, для `git clone` и `git pull` на сервере понадобится ключ доступа (deploy key).
+
+## Запуск на отдельном сервере
+
+Если порты 80/443 свободны, сайт запускается со своим Caddy:
 
 ```bash
 cp .env.example .env      # заполнить DOMAIN, BASE_URL, ADMIN_PASSWORD, SESSION_SECRET
 docker compose --profile https up -d --build
 ```
-
-- На домен нужна A-запись на IP сервера. HTTPS-сертификат Caddy получит сам.
-- **`BASE_URL` зашивается в QR-коды.** После того как документы ушли клиентам, его не меняйте, иначе старые QR-коды перестанут открываться.
-- Данные (база и файлы) лежат в томе Docker `data`. Резервная копия: `docker compose cp app:/data ./backup`.
-
-### Если на сервере уже работает другой сайт (например, CRM)
-
-Порты 80/443 уже заняты, поэтому второй Caddy с `--profile https` не запустится. В этом случае домен проверки добавляют в уже работающий Caddy/nginx как ещё один сайт и направляют на этот контейнер.
 
 ## Разработка
 

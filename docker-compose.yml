@@ -1,17 +1,19 @@
+# Два способа запуска (подробно — в README):
+#   1) на сервере CRM, через уже работающий там Caddy:
+#        docker compose -f docker-compose.yml -f docker-compose.crm.yml up -d --build
+#   2) на отдельном сервере, со своим Caddy:
+#        docker compose --profile https up -d --build
 services:
   app:
     build: .
     restart: unless-stopped
     env_file: .env
     environment:
-      PORT: "3000"            # внутри контейнера всегда 3000; снаружи — PORT из .env
+      PORT: "3000"
     volumes:
       - data:/data            # база и загруженные файлы — не теряются при обновлении
-    ports:
-      - "127.0.0.1:${PORT:-3000}:3000"
 
-  # HTTPS-прокси (сертификат Let's Encrypt выдаётся сам): docker compose --profile https up -d
-  # Если на сервере уже есть Caddy/nginx (например, от CRM) — этот сервис не включать, см. README.
+  # свой HTTPS-прокси — только для отдельного сервера (порты 80/443 должны быть свободны)
   caddy:
     image: caddy:2-alpine
     restart: unless-stopped
