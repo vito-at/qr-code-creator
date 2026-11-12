@@ -1,0 +1,26 @@
+{
+  "name": "doc-verify",
+  "version": "1.0.0",
+  "description": "Проверка документов по QR-коду",
+  "scripts": {
+    "start": "node --disable-warning=ExperimentalWarning src/server.js",
+    "dev": "node --disable-warning=ExperimentalWarning --env-file=.env --watch src/server.js",
+    "test": "node --disable-warning=ExperimentalWarning --test"
+  },
+  "dependencies": {
+    "express": "^4.22.3",
+    "jpeg-js": "^0.4.4",
+    "multer": "^2.5.0",
+    "pdfjs-dist": "^4.10.38",
+    "qrcode": "^1.5.4"
+  },
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=22.13"
+  },
+  "devDependencies": {
+    "jsqr": "^1.4.0",
+    "pngjs": "^7.0.0"
+  }
+}

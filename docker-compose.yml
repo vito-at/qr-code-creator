@@ -1,0 +1,35 @@
+services:
+  app:
+    build: .
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      PORT: "3000"            # внутри контейнера всегда 3000; снаружи — PORT из .env
+    volumes:
+      - data:/data            # база и загруженные файлы — не теряются при обновлении
+    ports:
+      - "127.0.0.1:${PORT:-3000}:3000"
+
+  # HTTPS-прокси (сертификат Let's Encrypt выдаётся сам): docker compose --profile https up -d
+  # Если на сервере уже есть Caddy/nginx (например, от CRM) — этот сервис не включать, см. README.
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    profiles: ["https"]
+    environment:
+      DOMAIN: ${DOMAIN:?Укажите DOMAIN в .env}
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - app
+
+volumes:
+  data:
+  caddy_data:
+  caddy_config:
