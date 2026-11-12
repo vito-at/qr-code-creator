@@ -74,7 +74,7 @@ describe("пароль", () => {
 describe("хэш из docker-compose", () => {
   it("«$$» в хэше понимается как «$»", () => {
     const h = hashPassword("compose-pass-1");
-    const c = loadConfig({ ADMIN_PASSWORD_HASH: h.replaceAll("$", "$$"), DATA_DIR: dir });
+    const c = loadConfig({ ADMIN_PASSWORD_HASH: h.split("$").join("$$"), DATA_DIR: dir });
     assert.equal(c.adminPassword, h);
     assert.equal(passwordOk("compose-pass-1", c.adminPassword), true);
   });

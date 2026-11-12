@@ -12,7 +12,8 @@ export function loadConfig(env = process.env) {
     baseUrl,
     adminPath,
     /** начальный пароль: хэш (npm run hash-password) или открытым текстом; после смены в админке действует новый */
-    adminPassword: env.ADMIN_PASSWORD_HASH || env.ADMIN_PASSWORD,
+    // «$$» → «$»: на случай, если хэш из docker-compose пришёл с неснятым экранированием (в хэше других «$$» не бывает)
+    adminPassword: env.ADMIN_PASSWORD_HASH?.split("$$").join("$") || env.ADMIN_PASSWORD,
     /** не задан — создаётся сам и хранится в data/session-secret */
     sessionSecret: env.SESSION_SECRET || null,
     dataDir: path.resolve(env.DATA_DIR || "./data"),
