@@ -1,0 +1,30 @@
+name: Проверка домена
+
+# Запускается вручную (Actions → «Проверка домена» → Run workflow): показывает DNS домена и отвечает ли сайт.
+on:
+  workflow_dispatch:
+    inputs:
+      domain:
+        description: Домен
+        default: hujjat-ipotekabank.uz
+
+jobs:
+  check:
+    name: DNS и HTTPS
+    runs-on: ubuntu-latest
+    steps:
+      - name: DNS
+        env:
+          D: ${{ inputs.domain }}
+        run: |
+          echo "NS (DNS-серверы домена):"; dig +short NS "$D"
+          echo "A через Google:";     dig +short A "$D" @8.8.8.8
+          echo "A через Cloudflare:"; dig +short A "$D" @1.1.1.1
+          for ns in $(dig +short NS "$D"); do echo "A на $ns:"; dig +short A "$D" @"$ns"; done
+      - name: Сайт
+        env:
+          D: ${{ inputs.domain }}
+        run: |
+          curl -sS -o /dev/null -w "http://$D/ → %{http_code}\n" --max-time 20 "http://$D/" || true
+          curl -sS -o /dev/null -w "https://$D/ → %{http_code}\n" --max-time 20 "https://$D/" || true
+          curl -sS -o /dev/null -w "https://$D/boshqaruv → %{http_code}\n" --max-time 20 "https://$D/boshqaruv" || true
