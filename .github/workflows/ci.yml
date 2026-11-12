@@ -1,0 +1,40 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    name: Тесты
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm test
+
+  docker:
+    name: Docker-образ собирается и запускается
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Сборка образа
+        run: docker build -t qr-code-creator:ci .
+      - name: Запуск и проверка страниц
+        run: |
+          HASH=$(docker run --rm qr-code-creator:ci node src/hash-password.js ci-password-123)
+          docker run -d --name app -p 3000:3000 -e ADMIN_PASSWORD_HASH="$HASH" -e ADMIN_PATH=boshqaruv -e BASE_URL=https://example.com qr-code-creator:ci
+          for i in $(seq 1 30); do curl -sf -o /dev/null http://localhost:3000/boshqaruv && break; sleep 1; done
+          curl -sf http://localhost:3000/boshqaruv | grep -q 'type="password"'
+          test "$(curl -s -o /dev/null -w '%{http_code}' http://localhost:3000/)" = 404
+          curl -sf -o /dev/null http://localhost:3000/static/pdfjs/pdf.worker.min.mjs
+          code=$(curl -s -o /dev/null -w '%{http_code}' -X POST -d password=ci-password-123 http://localhost:3000/boshqaruv/login)
+          test "$code" = 303
+          docker exec app test -s /data/session-secret
+      - name: Логи при ошибке
+        if: failure()
+        run: docker logs app || true
