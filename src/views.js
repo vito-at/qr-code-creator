@@ -27,7 +27,7 @@ function adminLayout(ctx, title, body) {
 <link rel="stylesheet" href="/static/admin.css"></head>
 <body><header class="top"><a href="${ctx.a}" class="brand">${t("appName")}</a>
 <div class="top-right"><nav class="langs">${switcher}</nav>${
-    ctx.loggedIn ? `<form method="post" action="${ctx.a}/logout"><button class="link">${t("logout")}</button></form>` : ""
+    ctx.loggedIn ? `<a href="${ctx.a}/password">${t("passwordMenu")}</a><form method="post" action="${ctx.a}/logout"><button class="link">${t("logout")}</button></form>` : ""
   }</div></header>
 <main>${ctx.flash ? `<p class="flash ${ctx.flash.kind}">${esc(t(`flash.${ctx.flash.key}`))}</p>` : ""}${body}</main>
 <script src="/static/admin.js"></script></body></html>`;
@@ -43,6 +43,23 @@ export function loginPage(ctx, errorKey) {
       ${errorKey ? `<p class="flash err">${esc(t(errorKey))}</p>` : ""}
       <label>${t("password")}<input type="password" name="password" autocomplete="current-password" required autofocus></label>
       <button class="btn primary">${t("signIn")}</button>
+    </form>`,
+  );
+}
+
+export function passwordPage(ctx) {
+  const t = makeT(ctx.lang);
+  return adminLayout(
+    ctx,
+    t("changePassword"),
+    `<p><a href="${ctx.a}">${t("back")}</a></p>
+    <form method="post" action="${ctx.a}/password" class="card narrow">
+      <h1>${t("changePassword")}</h1>
+      <p class="muted small">${t("changePasswordHint")}</p>
+      <label>${t("currentPassword")}<input type="password" name="current" autocomplete="current-password" required></label>
+      <label>${t("newPassword")}<input type="password" name="password" autocomplete="new-password" minlength="10" required></label>
+      <label>${t("repeatPassword")}<input type="password" name="repeat" autocomplete="new-password" minlength="10" required></label>
+      <button class="btn primary">${t("savePassword")}</button>
     </form>`,
   );
 }

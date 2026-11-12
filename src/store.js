@@ -28,9 +28,27 @@ export function openStore(dataDir) {
   `);
   const now = () => new Date().toISOString();
   const filePath = (token) => path.join(filesDir, token);
+  const secretFile = path.join(dataDir, "session-secret");
+  const passwordFile = path.join(dataDir, "admin-password");
+  const writePrivate = (file, value) => {
+    fs.writeFileSync(file + ".tmp", value, { mode: 0o600 });
+    fs.renameSync(file + ".tmp", file);
+  };
 
   return {
     filePath,
+    /** Секрет для подписи входа: создаётся при первом запуске */
+    sessionSecret() {
+      if (!fs.existsSync(secretFile)) writePrivate(secretFile, crypto.randomBytes(32).toString("hex"));
+      return fs.readFileSync(secretFile, "utf8").trim();
+    },
+    /** Пароль, заданный в админке (хэш), или null — тогда действует пароль из настроек */
+    adminPasswordHash() {
+      return fs.existsSync(passwordFile) ? fs.readFileSync(passwordFile, "utf8").trim() || null : null;
+    },
+    setAdminPasswordHash(hash) {
+      writePrivate(passwordFile, hash);
+    },
     create(title) {
       const token = crypto.randomBytes(16).toString("base64url");
       const r = db.prepare("INSERT INTO docs (token, title, created_at) VALUES (?, ?, ?)").run(token, title.slice(0, 200), now());

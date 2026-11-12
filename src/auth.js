@@ -6,8 +6,27 @@ const TTL_MS = 30 * 24 * 60 * 60 * 1000;
 const sha = (s) => crypto.createHash("sha256").update(s).digest();
 const sign = (secret, value) => crypto.createHmac("sha256", secret).update(value).digest("base64url");
 
-export function passwordOk(given, expected) {
-  return crypto.timingSafeEqual(sha(String(given ?? "")), sha(expected));
+const SCRYPT = { N: 16384, r: 8, p: 1 };
+
+/** Хэш пароля для хранения: scrypt$N$r$p$соль$хэш */
+export function hashPassword(password) {
+  const salt = crypto.randomBytes(16);
+  const hash = crypto.scryptSync(String(password), salt, 32, SCRYPT);
+  return `scrypt$${SCRYPT.N}$${SCRYPT.r}$${SCRYPT.p}$${salt.toString("base64url")}$${hash.toString("base64url")}`;
+}
+
+/** Проверка пароля: stored — хэш (scrypt$…) или пароль открытым текстом из ADMIN_PASSWORD */
+export function passwordOk(given, stored) {
+  const m = /^scrypt\$(\d+)\$(\d+)\$(\d+)\$([\w-]+)\$([\w-]+)$/.exec(stored);
+  if (!m) return crypto.timingSafeEqual(sha(String(given ?? "")), sha(stored));
+  const want = Buffer.from(m[5], "base64url");
+  const got = crypto.scryptSync(String(given ?? ""), Buffer.from(m[4], "base64url"), want.length, { N: +m[1], r: +m[2], p: +m[3] });
+  return crypto.timingSafeEqual(got, want);
+}
+
+/** Ключ подписи входа зависит от пароля: после смены пароля все старые входы недействительны */
+export function sessionKey(secret, storedPassword) {
+  return `${secret}:${sha(storedPassword).toString("base64url")}`;
 }
 
 /** Подписанная cookie входа: «срок.подпись» — без хранения сессий на сервере */

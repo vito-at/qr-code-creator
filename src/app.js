@@ -3,17 +3,20 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import express from "express";
 import multer from "multer";
-import { cookieHeader, loginLimiter, makeSession, passwordOk, readCookie, SESSION_MAX_AGE, sessionOk } from "./auth.js";
+import { cookieHeader, hashPassword, loginLimiter, makeSession, passwordOk, readCookie, SESSION_MAX_AGE, sessionKey, sessionOk } from "./auth.js";
 import { qrJpg, qrPng } from "./qr.js";
 import { LANG_COOKIE, LANGS, pickLang } from "./i18n.js";
 import { detectType } from "./store.js";
-import { docPage, listPage, loginPage, notFoundPage, viewerPage } from "./views.js";
+import { docPage, listPage, loginPage, notFoundPage, passwordPage, viewerPage } from "./views.js";
 
 const root = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 const pdfjsDir = path.join(root, "node_modules/pdfjs-dist");
 
 /** Сообщения после действий: в адресе только код (?m=…), текст — из i18n.js (flash.*) */
-const FLASH = { created: "ok", uploaded: "ok", renamed: "ok", deleted: "ok", badtype: "err", toobig: "err", nofile: "err", notfound: "err" };
+const FLASH = {
+  created: "ok", uploaded: "ok", renamed: "ok", deleted: "ok", passwordChanged: "ok",
+  badtype: "err", toobig: "err", nofile: "err", notfound: "err", wrongCurrent: "err", pwShort: "err", pwMismatch: "err",
+};
 
 const ADMIN_HEADERS = {
   "Content-Security-Policy": "default-src 'self'; img-src 'self' data:; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'",
@@ -30,6 +33,10 @@ export function createApp(config, store) {
   const limiter = loginLimiter();
   const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: config.maxFileMb * 1024 * 1024, files: 1 } });
   const publicUrl = (d) => `${config.baseUrl}/d/${d.token}`;
+  const secret = config.sessionSecret ?? store.sessionSecret();
+  // действующий пароль: заданный в админке, иначе — из настроек
+  const currentPassword = () => store.adminPasswordHash() ?? config.adminPassword;
+  const key = () => sessionKey(secret, currentPassword());
 
   app.disable("x-powered-by");
   app.set("trust proxy", 1);
@@ -103,16 +110,16 @@ export function createApp(config, store) {
 
   admin.post("/login", (req, res) => {
     if (limiter.blocked(req.ip)) return res.status(429).type("html").send(loginPage(req.ctx, "tooManyAttempts"));
-    if (!passwordOk(req.body.password, config.adminPassword)) {
+    if (!passwordOk(req.body.password, currentPassword())) {
       limiter.fail(req.ip);
       return res.status(401).type("html").send(loginPage(req.ctx, "wrongPassword"));
     }
     limiter.reset(req.ip);
-    res.set("Set-Cookie", cookieHeader(makeSession(config.sessionSecret), { ...cookieOpts, maxAgeSec: SESSION_MAX_AGE })).redirect(303, A);
+    res.set("Set-Cookie", cookieHeader(makeSession(key()), { ...cookieOpts, maxAgeSec: SESSION_MAX_AGE })).redirect(303, A);
   });
 
   admin.use((req, res, next) => {
-    if (sessionOk(config.sessionSecret, readCookie(req))) {
+    if (sessionOk(key(), readCookie(req))) {
       req.ctx.loggedIn = true;
       return next();
     }
@@ -121,6 +128,22 @@ export function createApp(config, store) {
   });
 
   admin.post("/logout", (req, res) => res.set("Set-Cookie", cookieHeader("", { ...cookieOpts, maxAgeSec: 0 })).redirect(303, A));
+
+  admin.get("/password", (req, res) => res.type("html").send(passwordPage(req.ctx)));
+  admin.post("/password", (req, res) => {
+    const back = (m) => res.redirect(303, `${A}/password?m=${m}`);
+    if (limiter.blocked(req.ip)) return back("wrongCurrent");
+    if (!passwordOk(req.body.current, currentPassword())) {
+      limiter.fail(req.ip);
+      return back("wrongCurrent");
+    }
+    const next = String(req.body.password ?? "");
+    if (next.length < 10) return back("pwShort");
+    if (next !== req.body.repeat) return back("pwMismatch");
+    store.setAdminPasswordHash(hashPassword(next));
+    // все остальные входы закрываются, текущему сотруднику выдаём новый
+    res.set("Set-Cookie", cookieHeader(makeSession(key()), { ...cookieOpts, maxAgeSec: SESSION_MAX_AGE })).redirect(303, `${A}?m=passwordChanged`);
+  });
 
   admin.get("/", (req, res) => res.type("html").send(listPage(req.ctx, store.list())));
 

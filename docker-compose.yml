@@ -1,8 +1,5 @@
-# Два способа запуска (подробно — в README):
-#   1) на сервере CRM, через уже работающий там Caddy:
-#        docker compose -f docker-compose.yml -f docker-compose.crm.yml up -d --build
-#   2) на отдельном сервере, со своим Caddy:
-#        docker compose --profile https up -d --build
+# Запуск на отдельном сервере со своим Caddy: docker compose --profile https up -d --build
+# На сервере CRM этот файл не используется: сайт запускается из crm/docker-compose.yml (см. README).
 services:
   app:
     build: .
