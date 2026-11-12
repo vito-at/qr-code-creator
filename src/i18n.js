@@ -1,0 +1,141 @@
+/** Тексты админки на узбекском и русском. Страница проверяющего — на трёх языках сразу (см. views.js) */
+export const LANGS = ["uz", "ru"];
+export const LANG_COOKIE = "dv_lang";
+
+const ru = {
+  appName: "Проверка документов",
+  langName: "Русский",
+  logout: "Выйти",
+  login: "Вход",
+  password: "Пароль",
+  signIn: "Войти",
+  wrongPassword: "Неверный пароль",
+  tooManyAttempts: "Слишком много попыток. Подождите 15 минут.",
+  documents: "Документы",
+  newDoc: "Новый документ",
+  newDocHint: "Нажмите «Создать» — появится QR-код. Скачайте его, вставьте в документ и загрузите готовый файл на странице документа.",
+  titlePlaceholder: "Название для себя (необязательно), например: «Алиев — справка»",
+  create: "Создать",
+  allDocs: "Все документы",
+  noDocs: "Пока нет документов.",
+  colTitle: "Название",
+  colFile: "Файл",
+  colViews: "Просмотры",
+  colCreated: "Создан",
+  fileReady: "Загружен",
+  fileWaiting: "Ждёт файл",
+  docN: "Документ №{n}",
+  back: "← Все документы",
+  titleShort: "Название для себя",
+  saveTitle: "Сохранить название",
+  qrHeading: "1. QR-код",
+  qrAlt: "QR-код",
+  downloadPng: "Скачать PNG",
+  downloadJpg: "Скачать JPG",
+  qrLeadsTo: "Код ведёт на адрес:",
+  copy: "Копировать",
+  copied: "Скопировано",
+  fileHeading: "2. Файл с QR-кодом",
+  uploadedInfo: "Загружен:",
+  openAsInspector: "Открыть как проверяющий",
+  views: "Просмотров по QR-коду: {n}",
+  lastView: ", последний — {date}",
+  noFileYet: "Файл ещё не загружен. Пока его нет, по QR-коду открывается «Документ не найден».",
+  replaceFile: "Заменить файл",
+  uploadFile: "Загрузить файл",
+  fileTypes: "(PDF, JPG, PNG, WEBP, до {mb} МБ)",
+  replace: "Заменить",
+  upload: "Загрузить",
+  deleteDoc: "Удалить документ",
+  deleteConfirm: "Удалить документ? QR-код перестанет работать, это нельзя отменить.",
+  mb: "МБ",
+  kb: "КБ",
+  flash: {
+    created: "Документ создан. Скачайте QR-код, вставьте его в файл и загрузите файл ниже.",
+    uploaded: "Файл загружен. Теперь QR-код открывает этот файл.",
+    renamed: "Название сохранено.",
+    deleted: "Документ удалён.",
+    badtype: "Можно загрузить только PDF, JPG, PNG или WEBP.",
+    toobig: "Файл слишком большой.",
+    nofile: "Выберите файл.",
+    notfound: "Документ не найден.",
+  },
+};
+
+/** @type {typeof ru} */
+const uz = {
+  appName: "Hujjatlarni tekshirish",
+  langName: "O‘zbekcha",
+  logout: "Chiqish",
+  login: "Kirish",
+  password: "Parol",
+  signIn: "Kirish",
+  wrongPassword: "Parol noto‘g‘ri",
+  tooManyAttempts: "Urinishlar juda ko‘p. 15 daqiqa kuting.",
+  documents: "Hujjatlar",
+  newDoc: "Yangi hujjat",
+  newDocHint: "«Yaratish» tugmasini bosing — QR-kod paydo bo‘ladi. Uni yuklab oling, hujjatga joylashtiring va tayyor faylni hujjat sahifasida yuklang.",
+  titlePlaceholder: "O‘zingiz uchun nom (ixtiyoriy), masalan: «Aliyev — ma’lumotnoma»",
+  create: "Yaratish",
+  allDocs: "Barcha hujjatlar",
+  noDocs: "Hozircha hujjatlar yo‘q.",
+  colTitle: "Nomi",
+  colFile: "Fayl",
+  colViews: "Ko‘rishlar",
+  colCreated: "Yaratilgan",
+  fileReady: "Yuklangan",
+  fileWaiting: "Fayl kutilmoqda",
+  docN: "Hujjat №{n}",
+  back: "← Barcha hujjatlar",
+  titleShort: "O‘zingiz uchun nom",
+  saveTitle: "Nomni saqlash",
+  qrHeading: "1. QR-kod",
+  qrAlt: "QR-kod",
+  downloadPng: "PNG yuklab olish",
+  downloadJpg: "JPG yuklab olish",
+  qrLeadsTo: "Kod quyidagi manzilga olib boradi:",
+  copy: "Nusxa olish",
+  copied: "Nusxa olindi",
+  fileHeading: "2. QR-kodli fayl",
+  uploadedInfo: "Yuklangan:",
+  openAsInspector: "Tekshiruvchi sifatida ochish",
+  views: "QR-kod orqali ko‘rishlar: {n}",
+  lastView: ", oxirgisi — {date}",
+  noFileYet: "Fayl hali yuklanmagan. U yuklanmaguncha QR-kod orqali «Hujjat topilmadi» sahifasi ochiladi.",
+  replaceFile: "Faylni almashtirish",
+  uploadFile: "Faylni yuklash",
+  fileTypes: "(PDF, JPG, PNG, WEBP, {mb} MB gacha)",
+  replace: "Almashtirish",
+  upload: "Yuklash",
+  deleteDoc: "Hujjatni o‘chirish",
+  deleteConfirm: "Hujjat o‘chirilsinmi? QR-kod ishlamay qoladi, buni qaytarib bo‘lmaydi.",
+  mb: "MB",
+  kb: "KB",
+  flash: {
+    created: "Hujjat yaratildi. QR-kodni yuklab oling, faylga joylashtiring va faylni quyida yuklang.",
+    uploaded: "Fayl yuklandi. Endi QR-kod shu faylni ochadi.",
+    renamed: "Nom saqlandi.",
+    deleted: "Hujjat o‘chirildi.",
+    badtype: "Faqat PDF, JPG, PNG yoki WEBP yuklash mumkin.",
+    toobig: "Fayl juda katta.",
+    nofile: "Faylni tanlang.",
+    notfound: "Hujjat topilmadi.",
+  },
+};
+
+export const MESSAGES = { ru, uz };
+
+/** Язык: выбранный в переключателе (cookie), иначе по браузеру — русский для русскоязычных, остальным узбекский */
+export function pickLang(cookieValue, acceptLanguage = "") {
+  if (LANGS.includes(cookieValue)) return cookieValue;
+  return /^\s*ru\b/i.test(acceptLanguage) ? "ru" : "uz";
+}
+
+/** t("views", { n: 3 }) → «Просмотров по QR-коду: 3» */
+export function makeT(lang) {
+  const dict = MESSAGES[lang] ?? MESSAGES.uz;
+  return (key, vars) => {
+    const raw = key.split(".").reduce((o, k) => o?.[k], dict) ?? key;
+    return vars ? raw.replace(/\{(\w+)\}/g, (m, k) => (k in vars ? String(vars[k]) : m)) : raw;
+  };
+}

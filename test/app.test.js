@@ -139,3 +139,29 @@ describe("остальные страницы для проверяющего з
     });
   }
 });
+
+describe("язык админки", () => {
+  it("по умолчанию — узбекский, для русского браузера — русский", async () => {
+    assert.match(await (await fetch(`${base}/panel`)).text(), /Parol/);
+    assert.match(await (await fetch(`${base}/panel`, { headers: { "accept-language": "ru-RU,ru;q=0.9" } })).text(), /Пароль/);
+  });
+  it("переключатель запоминает язык и возвращает на ту же страницу", async () => {
+    const r = await req("/panel/lang/ru", { headers: { referer: `${base}/panel/docs/5` } });
+    assert.equal(r.status, 303);
+    assert.equal(r.headers.get("location"), "/panel/docs/5");
+    const lang = r.headers.get("set-cookie").split(";")[0];
+    const page = await (await req("/panel", { headers: { cookie: `${cookie}; ${lang}` } })).text();
+    assert.match(page, /Новый документ/);
+    assert.match(await (await req("/panel", { headers: { cookie: `${cookie}; dv_lang=uz` } })).text(), /Yangi hujjat/);
+  });
+  it("переключатель не уводит на чужой сайт", async () => {
+    const r = await req("/panel/lang/uz", { headers: { referer: "https://evil.example/panel/x" } });
+    assert.equal(r.headers.get("location"), "/panel");
+  });
+  it("ключи переводов совпадают", async () => {
+    const { MESSAGES } = await import("../src/i18n.js");
+    const keys = (o, p = "") => Object.entries(o).flatMap(([k, v]) => (typeof v === "string" ? [p + k] : keys(v, `${p}${k}.`))).sort();
+    assert.deepEqual(keys(MESSAGES.uz), keys(MESSAGES.ru));
+    for (const [k, v] of Object.entries(MESSAGES.uz)) if (typeof v === "string") assert.doesNotMatch(v, /[А-Яа-яЁё]/, k);
+  });
+});

@@ -10,7 +10,7 @@ document.addEventListener("click", async (e) => {
     document.execCommand("copy");
   }
   const old = btn.textContent;
-  btn.textContent = "Скопировано";
+  btn.textContent = btn.dataset.done;
   setTimeout(() => (btn.textContent = old), 1500);
 });
 

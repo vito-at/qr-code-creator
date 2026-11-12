@@ -34,5 +34,5 @@ async function render() {
 }
 
 render().catch(() => {
-  status.textContent = "Не удалось открыть документ / Could not open the document";
+  status.textContent = "Hujjatni ochib bo‘lmadi / Не удалось открыть документ / Could not open the document";
 });

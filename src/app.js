@@ -5,22 +5,15 @@ import express from "express";
 import multer from "multer";
 import { cookieHeader, loginLimiter, makeSession, passwordOk, readCookie, SESSION_MAX_AGE, sessionOk } from "./auth.js";
 import { qrJpg, qrPng } from "./qr.js";
+import { LANG_COOKIE, LANGS, pickLang } from "./i18n.js";
 import { detectType } from "./store.js";
 import { docPage, listPage, loginPage, notFoundPage, viewerPage } from "./views.js";
 
 const root = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 const pdfjsDir = path.join(root, "node_modules/pdfjs-dist");
 
-/** Сообщения после действий: в адресе только код, текст — отсюда */
-const FLASH = {
-  created: { kind: "ok", text: "Документ создан. Скачайте QR-код, вставьте его в файл и загрузите файл ниже." },
-  uploaded: { kind: "ok", text: "Файл загружен. Теперь QR-код открывает этот файл." },
-  renamed: { kind: "ok", text: "Название сохранено." },
-  deleted: { kind: "ok", text: "Документ удалён." },
-  badtype: { kind: "err", text: "Можно загрузить только PDF, JPG, PNG или WEBP." },
-  toobig: { kind: "err", text: "Файл слишком большой." },
-  nofile: { kind: "err", text: "Выберите файл." },
-};
+/** Сообщения после действий: в адресе только код (?m=…), текст — из i18n.js (flash.*) */
+const FLASH = { created: "ok", uploaded: "ok", renamed: "ok", deleted: "ok", badtype: "err", toobig: "err", nofile: "err", notfound: "err" };
 
 const ADMIN_HEADERS = {
   "Content-Security-Policy": "default-src 'self'; img-src 'self' data:; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'",
@@ -93,30 +86,43 @@ export function createApp(config, store) {
       const origin = req.get("origin") || req.get("referer");
       if (origin && URL.parse(origin)?.host !== req.get("host")) return res.status(403).send("Forbidden");
     }
+    const flashKey = Object.hasOwn(FLASH, req.query.m) ? req.query.m : null;
+    req.ctx = { a: A, lang: pickLang(readCookie(req, LANG_COOKIE), req.get("accept-language")), loggedIn: false, flash: flashKey && { kind: FLASH[flashKey], key: flashKey } };
     next();
+  });
+
+  // переключатель языка (доступен и до входа): запоминаем выбор и возвращаемся на ту же страницу админки
+  admin.get("/lang/:lang", (req, res) => {
+    const lang = LANGS.includes(req.params.lang) ? req.params.lang : "uz";
+    const ref = URL.parse(req.get("referer") ?? "");
+    const back = ref && ref.host === req.get("host") && (ref.pathname === A || ref.pathname.startsWith(`${A}/`)) ? ref.pathname : A;
+    res.set("Set-Cookie", `${LANG_COOKIE}=${lang}; Path=/; Max-Age=31536000; SameSite=Lax${config.secureCookies ? "; Secure" : ""}`).redirect(303, back);
   });
 
   const cookieOpts = { secure: config.secureCookies, path: "/" };
 
   admin.post("/login", (req, res) => {
-    if (limiter.blocked(req.ip)) return res.status(429).type("html").send(loginPage(A, "Слишком много попыток. Подождите 15 минут."));
+    if (limiter.blocked(req.ip)) return res.status(429).type("html").send(loginPage(req.ctx, "tooManyAttempts"));
     if (!passwordOk(req.body.password, config.adminPassword)) {
       limiter.fail(req.ip);
-      return res.status(401).type("html").send(loginPage(A, "Неверный пароль"));
+      return res.status(401).type("html").send(loginPage(req.ctx, "wrongPassword"));
     }
     limiter.reset(req.ip);
     res.set("Set-Cookie", cookieHeader(makeSession(config.sessionSecret), { ...cookieOpts, maxAgeSec: SESSION_MAX_AGE })).redirect(303, A);
   });
 
   admin.use((req, res, next) => {
-    if (sessionOk(config.sessionSecret, readCookie(req))) return next();
-    if (req.method === "GET" && req.path === "/") return res.type("html").send(loginPage(A));
+    if (sessionOk(config.sessionSecret, readCookie(req))) {
+      req.ctx.loggedIn = true;
+      return next();
+    }
+    if (req.method === "GET" && req.path === "/") return res.type("html").send(loginPage(req.ctx));
     res.redirect(303, A);
   });
 
   admin.post("/logout", (req, res) => res.set("Set-Cookie", cookieHeader("", { ...cookieOpts, maxAgeSec: 0 })).redirect(303, A));
 
-  admin.get("/", (req, res) => res.type("html").send(listPage(A, store.list(), FLASH[req.query.m] ?? null)));
+  admin.get("/", (req, res) => res.type("html").send(listPage(req.ctx, store.list())));
 
   admin.post("/docs", (req, res) => {
     const d = store.create(String(req.body.title ?? "").trim());
@@ -125,11 +131,11 @@ export function createApp(config, store) {
 
   const withDoc = (handler) => (req, res, next) => {
     const d = /^\d+$/.test(req.params.id) ? store.get(Number(req.params.id)) : null;
-    if (!d) return res.status(404).type("html").send(listPage(A, store.list(), { kind: "err", text: "Документ не найден" }));
+    if (!d) return res.status(404).type("html").send(listPage({ ...req.ctx, flash: { kind: "err", key: "notfound" } }, store.list()));
     return handler(req, res, d, next);
   };
 
-  admin.get("/docs/:id", withDoc((req, res, d) => res.type("html").send(docPage(A, d, publicUrl(d), config.maxFileMb, FLASH[req.query.m] ?? null))));
+  admin.get("/docs/:id", withDoc((req, res, d) => res.type("html").send(docPage(req.ctx, d, publicUrl(d), config.maxFileMb))));
 
   const qrSize = (req) => Math.min(3000, Math.max(200, Number(req.query.size) || 1200));
   const dl = (req, res, d, ext) => {
