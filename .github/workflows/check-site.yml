@@ -21,6 +21,10 @@ jobs:
           echo "A через Google:";     dig +short A "$D" @8.8.8.8
           echo "A через Cloudflare:"; dig +short A "$D" @1.1.1.1
           for ns in $(dig +short NS "$D"); do echo "A на $ns:"; dig +short A "$D" @"$ns"; done
+          echo "Делегирование в реестре .uz:"
+          for tld in $(dig +short NS uz. | head -2); do echo "  $tld:"; dig +norec NS "$D" @"$tld" | grep -E "IN\s+NS" || echo "  (нет)"; done
+          for ns in rdns1.ahost.uz rdns2.ahost.uz; do echo "A прямо на $ns:"; dig +short A "$D" @"$ns" || true; done
+          echo "whois:"; (sudo apt-get install -y -qq whois >/dev/null 2>&1 && whois "$D" | grep -iE "name ?server|status|expir|creat" ) || true
       - name: Сайт
         env:
           D: ${{ inputs.domain }}
